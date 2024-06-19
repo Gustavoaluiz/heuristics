@@ -9,7 +9,7 @@ class TabuSearch:
         self.best_sol = []
         self.best_cost = float('inf')
 
-    def calculate_cost(self, solution):
+    def _calculate_cost(self, solution):
         """Retorna função objetivo/custo da solução."""
 
         cost = 0
@@ -22,7 +22,7 @@ class TabuSearch:
 
         return cost
     
-    def get_initial_solution(self):
+    def _get_initial_solution(self):
         """Retorna uma solução inicial aleatória."""
 
         solution = list(range(self.len_matrix))
@@ -31,7 +31,7 @@ class TabuSearch:
         return solution
         
     
-    def get_neighborhood(self, solution):
+    def _get_neighborhood(self, solution):
         """Retorna vizinhança da solução através de movimentos de TROCA"""
 
         neighborhood = []
@@ -44,14 +44,14 @@ class TabuSearch:
 
         return neighborhood
     
-    def get_best_neighbor(self, neighborhood):
+    def _get_best_neighbor(self, neighborhood):
         """Retorna o melhor vizinho (candidato) da vizinhança."""
 
         best_neighbor_cost = float('inf')
 
         for neighbor, move in neighborhood:
             if move not in self.tabu_list:
-                neighbor_cost = self.calculate_cost(neighbor)
+                neighbor_cost = self._calculate_cost(neighbor)
 
                 # Se o vizinho é melhor que a solução corrente e não está na lista tabu
                 # então atualiza a solução corrente.
@@ -59,10 +59,15 @@ class TabuSearch:
                     best_neighbor = neighbor
                     best_neighbor_cost = neighbor_cost
                     best_move = move
+            # Função de aspiração
+            elif neighbor_cost < self.best_cost:
+                self.tabu_list.remove(move)
+                self.best_cost = neighbor_cost
+                self.best_sol = neighbor
 
         return best_neighbor, best_neighbor_cost, best_move
     
-    def update_tabu(self, solution):
+    def _update_tabu(self, solution):
         """Atualiza lista tabu."""
 
         if len(self.tabu_list) >= self.tabu_size:
@@ -73,23 +78,23 @@ class TabuSearch:
         """Executa busca tabu."""
 
         # Inicialização aleatória
-        current_sol = self.get_initial_solution()
-        current_cost = self.calculate_cost(current_sol)
+        current_sol = self._get_initial_solution()
+        current_cost = self._calculate_cost(current_sol)
         if current_cost < self.best_cost:
             self.best_cost = current_cost
             self.best_sol = current_sol
 
         # Executa busca
         for _ in range(max_iter):
-            neighborhood = self.get_neighborhood(current_sol)
-            current_sol, current_cost, current_move = self.get_best_neighbor(neighborhood)
+            neighborhood = self._get_neighborhood(current_sol)
+            current_sol, current_cost, current_move = self._get_best_neighbor(neighborhood)
 
             # Atualiza melhor solução
             if current_cost < self.best_cost:
                 self.best_cost = current_cost
                 self.best_sol = current_sol
 
-            self.update_tabu(current_move)
+            self._update_tabu(current_move)
 
         return self.best_sol, self.best_cost
     
