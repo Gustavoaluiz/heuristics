@@ -1,4 +1,5 @@
-import random
+from random import shuffle
+
 
 class TabuSearch:
     def __init__(self, matrix, tabu_size=10):
@@ -25,8 +26,11 @@ class TabuSearch:
     def _get_initial_solution(self):
         """Retorna uma solução inicial aleatória."""
 
-        solution = list(range(self.len_matrix))
-        random.shuffle(solution)
+        # Fixa a cidade de origem
+        solution = [0]
+        cities = list(range(1,20))
+        shuffle(cities)
+        solution.extend(cities)
 
         return solution
         
@@ -35,7 +39,7 @@ class TabuSearch:
         """Retorna vizinhança da solução através de movimentos de TROCA"""
 
         neighborhood = []
-        for i in range(self.len_matrix):
+        for i in range(1, self.len_matrix):
             for j in range(i+1, self.len_matrix):
                 neighbor = solution.copy()
                 neighbor[i], neighbor[j] = neighbor[j], neighbor[i]
@@ -50,9 +54,9 @@ class TabuSearch:
         best_neighbor_cost = float('inf')
 
         for neighbor, move in neighborhood:
+            neighbor_cost = self._calculate_cost(neighbor)
+            
             if move not in self.tabu_list:
-                neighbor_cost = self._calculate_cost(neighbor)
-
                 # Se o vizinho é melhor que a solução corrente e não está na lista tabu
                 # então atualiza a solução corrente.
                 if neighbor_cost < best_neighbor_cost:
@@ -95,6 +99,4 @@ class TabuSearch:
                 self.best_sol = current_sol
 
             self._update_tabu(current_move)
-
-        return self.best_sol, self.best_cost
     
