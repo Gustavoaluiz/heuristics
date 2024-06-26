@@ -38,50 +38,62 @@ class GraspReativo:
         self.alpha['scores'][index] += 1 / (custo_solucao + 1) 
 
     def _retorna_alpha(self, iteracao):
-        # Após a fase de amostragem, temos a distribuiçao de probabilidade dos alfas
-        # E entao começamos a utiliza-la, mas ainda atualizamos as probabilidades
-        if iteracao >= self.alpha['num_amostras'] * self.alpha['qtd']: # Retorna as probabilidades somente se já forem retiradas num_amostras de cada alpha
+        # Após a fase de amostragem, temos a distribuiçao de probabilidade dos alphas
+        # e entao começamos a utiliza-la, mas continuamos atualizando as probabilidades
+        if iteracao >= self.alpha['num_amostras'] * self.alpha['qtd']:
+            # Tira a média do score de acordo com o uso
+            # porque alphas mais escolhidos terão maior score, o que não é a intenção.
+            prob_alphas = self.alpha['scores'] / self.alpha['usos'] 
+            # Normaliza as probabilidades entre 0 e 1
+            prob_alphas = prob_alphas / np.sum(prob_alphas) 
 
-            prob_alphas = self.alpha['scores'] / self.alpha['usos'] # Tira a média do score de acordo com o uso, por que alphas mais escolhidos terão maior score, o que não é a intenção.
-            prob_alphas = prob_alphas / np.sum(prob_alphas) # Normaliza as probabilidades entre 0 e 1
-
-            index = np.random.choice(range(self.alpha['qtd']), p=prob_alphas) # Índice de alpha escolhido aleatoriamente
+            # Escolhe um alpha de acordo com a distribuição de probabilidade 
+            index = np.random.choice(range(self.alpha['qtd']), p=prob_alphas) 
             self.alpha['usos'][index] += 1
 
-            return self.alpha['alphas'][index], index # Retorna o alpha e seu índice
+            return self.alpha['alphas'][index], index
 
-        # A cada iteraçao, é utiliado um alfa diferente de forma cíclica
-        # Faz 10 amostras para cada alfa para construir a distribuiçao de probabilidade
+        # A cada iteraçao, é utilizado um alpha diferente de forma cíclica
+        # Faz "num_amostras" amostras para cada alpha para construir a distribuiçao de probabilidade
+        # antes de começar a utilizá-la
         index = iteracao % self.alpha['qtd'] 
         self.alpha['usos'][index] += 1
+
         return self.alpha['alphas'][index], index
 
     def _construcao(self, alpha):
-        '''A fase de construção é utilizada para gerar uma solução inicial, a qual mistura gulosidade e aleatoriedade, gernado um range de possíveis escolhas de caminho entre dois nós, sendo essas escolhas baseadas na solução gulosa.'''
-
         tamanho_matriz = len(self.matriz_custo)
-        indice_atual = self.cidade_partida # Inicializa pela cidade definida como primeira
+        # Inicializa pela cidade fixada como primeira
+        indice_atual = self.cidade_partida 
         solucao = [indice_atual]
 
-        restantes = set(range(tamanho_matriz)) - set(solucao) # Constroi a solução até que todos os nós tenham sido inseridos nela
+        # Constroi a solução até que todos os nós tenham sido inseridos nela
+        restantes = set(range(tamanho_matriz)) - set(solucao) 
 
         while restantes:
             # Lista para guardar os custos de adicionar cada candidato restante
             lista_candidatos = [] 
 
+            # Calcula o custo para cada candidato considerando a cidade atual
             for candidato in restantes:
-                custo = self.matriz_custo[indice_atual][candidato] # Calcula o custo para cada candidato
+                custo = self.matriz_custo[indice_atual][candidato] 
                 lista_candidatos.append((custo, candidato))
 
-            lista_candidatos.sort() # Ordenar candidatos pelo custo
+            # Ordena candidatos pelo custo
+            lista_candidatos.sort() 
 
             custo_min, custo_max = lista_candidatos[0][0], lista_candidatos[-1][0]
-            limite = custo_min + alpha * (custo_max - custo_min) # Trabalha com o alpha * amplitude para o range de escolha
-            rcl = [c for c in lista_candidatos if c[0] <= limite] # Lista de candidatos que tem custo "aceitável"
+            # Utiliza o alpha * amplitude como limiar de escolha de candidataos
+            limite = custo_min + alpha * (custo_max - custo_min)  
+            # Lista de Candidatos Restrita - candidadtos que possuem custo "aceitável" (abaixo do limiar)
+            rcl = [c for c in lista_candidatos if c[0] <= limite] 
 
-            _, candidato_escolhido = random.choice(rcl) # Escolher um candidato aleatório da RCL
+            # Escolhe um candidato aleatório da RCL
+            _, candidato_escolhido = random.choice(rcl) 
             solucao.append(candidato_escolhido)
             restantes.remove(candidato_escolhido)
+            
+            # "Percorre" para a próxima cidade, que será a atual na próxima iteração
             indice_atual = candidato_escolhido
 
         return solucao
@@ -92,13 +104,12 @@ class GraspReativo:
         for i in range(len(solucao) - 1):
             custo_total += self.matriz_custo[solucao[i]][solucao[i+1]]
 
-        custo_total += self.matriz_custo[solucao[-1]][solucao[0]]  # Assumindo problema circular
+        custo_total += self.matriz_custo[solucao[-1]][solucao[0]] 
         return custo_total
-
 
     def gerar_solucao(self):
         for iteracao in range(self.max_iter):
-            # Cada iteraçao é analisado um alfa diferente, de forma ciclica
+            print(f'Iteração {iteracao}')
             alpha, alpha_index = self._retorna_alpha(iteracao)
 
             solucao_inicial = self._construcao(alpha)
@@ -111,5 +122,5 @@ class GraspReativo:
                 self.melhor_solucao = melhor_solucao
                 self.melhor_custo = custo_solucao
             
-            # Atualizamos a probabilidade do alfa conforme o custo que sua soluçao gerou
+            # Atualizamos a probabilidade do alpha conforme o custo que sua soluçao gerou
             self._atualizar_alpha_prob(alpha_index, custo_solucao)
